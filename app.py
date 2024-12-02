@@ -26,3 +26,7 @@ model = ARFClassifier(
     n_models=10,
     seed=42
 )
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 5000))  # Utilise $PORT de Railway, sinon 5000 par défaut
+    app.run(host="0.0.0.0", port=port)
