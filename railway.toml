@@ -6,11 +6,11 @@ buildCommand = "pip install -r requirements.txt"
 startCommand = "gunicorn app:app --bind 0.0.0.0:$PORT"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 100
-restartPolicyType = "on-failure"
 restartPolicyMaxRetries = 3
 
 [service]
 internal_port = 5000
+name = "Pumpfunguard"
 
 [database]
 type = "mongodb"
