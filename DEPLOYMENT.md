@@ -1,258 +1,192 @@
-# Guide de Déploiement Détaillé
+# Guide de Déploiement PumpFun Guard
 
-## 1. Préparation
+## 1. Configuration Railway
 
-### Base de données MongoDB Atlas
+### Variables d'Environnement Railway
 
-1. Créer un compte MongoDB Atlas
-2. Créer un nouveau projet
-3. Créer un cluster (choisir la région la plus proche)
-4. Créer un utilisateur de base de données
-5. Configurer l'accès réseau
-6. Obtenir l'URI de connexion
-
-### Variables d'environnement requises
-
+1. Variables Backend :
 ```env
-# Backend
-MONGO_URI=mongodb+srv://...
 FLASK_ENV=production
-FLASK_SECRET_KEY=your-secret-key
-PUMPFUN_API_KEY=your-api-key
+FLASK_SECRET_KEY=<généré via generate_key.py>
+FLASK_DEBUG=0
+PORT=5000
+PUMPFUN_API_KEY=<votre clé API PumpFun>
 
-# Frontend
-VITE_API_URL=https://your-api.railway.app/api
-VITE_PUMPFUN_WS_URL=wss://rpc.api-pump.fun/ws
+# RPC Solana
+SOLANA_RPC_MAINNET=https://api.mainnet-beta.solana.com
+SOLANA_RPC_FALLBACK_1=https://solana-api.projectserum.com
+SOLANA_RPC_FALLBACK_2=https://rpc.ankr.com/solana
+SOLANA_WSS_MAINNET=wss://api.mainnet-beta.solana.com
+SOLANA_WSS_FALLBACK=wss://solana-api.projectserum.com
+
+# Rate Limiting
+RATE_LIMIT_PER_MINUTE=100
+RATE_LIMIT_PER_HOUR=1000
 ```
 
-## 2. Déploiement Backend (Railway)
+2. Variables MongoDB (automatiquement configurées par Railway) :
+```env
+MONGODB_URL=<généré automatiquement>
+MONGO_URI=mongodb://${MONGODB_USER}:${MONGODB_PASSWORD}@mongodb.railway.internal:27017
+MONGODB_USER=<généré automatiquement>
+MONGODB_PASSWORD=<généré automatiquement>
+MONGODB_DATABASE=pumpfun_guard
+```
 
-1. Connexion à Railway :
+### Configuration MongoDB sur Railway
+
+1. Ajouter MongoDB :
 ```bash
-railway login
+railway add mongodb
 ```
 
-2. Initialiser le projet :
+2. Configuration automatique :
+- Railway génère automatiquement les credentials
+- La base de données est accessible via mongodb.railway.internal
+- Le port par défaut est 27017
+
+3. Vérification de la connexion :
 ```bash
-railway init
+railway connect mongodb
 ```
 
-3. Ajouter les variables d'environnement :
-```bash
-railway vars set MONGO_URI=mongodb+srv://...
-railway vars set FLASK_ENV=production
-railway vars set FLASK_SECRET_KEY=your-secret-key
-```
+### Configuration des Fallbacks RPC
 
-4. Configurer le service :
-```bash
-# railway.json
-{
-  "build": {
-    "builder": "NIXPACKS",
-    "buildCommand": "pip install -r requirements.txt"
-  },
-  "run": {
-    "command": "gunicorn app:app"
-  }
-}
-```
-
-5. Déployer :
-```bash
-railway up
-```
-
-## 3. Déploiement Frontend (Vercel)
-
-1. Connexion à Vercel :
-```bash
-vercel login
-```
-
-2. Configurer le projet :
-```bash
-# vercel.json
-{
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "framework": "vite",
-  "environment": {
-    "VITE_API_URL": "https://your-api.railway.app/api",
-    "VITE_PUMPFUN_WS_URL": "wss://rpc.api-pump.fun/ws"
-  }
-}
-```
-
-3. Déployer :
-```bash
-vercel --prod
-```
-
-## 4. Configuration SSL/TLS
-
-### Backend (Railway)
-
-- SSL géré automatiquement par Railway
-- Vérifier le certificat dans les paramètres du projet
-
-### Frontend (Vercel)
-
-- SSL géré automatiquement par Vercel
-- Configurer les domaines personnalisés si nécessaire
-
-## 5. Monitoring
-
-### Sentry
-
-1. Créer un projet sur Sentry
-2. Ajouter la configuration :
-
-```typescript
-// src/main.tsx
-import * as Sentry from "@sentry/react";
-
-Sentry.init({
-  dsn: "your-sentry-dsn",
-  environment: process.env.NODE_ENV
-});
-```
-
-### Logging
-
-1. Configurer les logs backend :
+1. Créer le fichier `config/rpc.py` :
 ```python
-# app.py
-import logging
+RPC_CONFIG = {
+    'mainnet': {
+        'primary': {
+            'http': 'https://api.mainnet-beta.solana.com',
+            'ws': 'wss://api.mainnet-beta.solana.com'
+        },
+        'fallbacks': [
+            {
+                'http': 'https://solana-api.projectserum.com',
+                'ws': 'wss://solana-api.projectserum.com'
+            },
+            {
+                'http': 'https://rpc.ankr.com/solana',
+                'ws': None  # HTTP only
+            }
+        ]
+    }
+}
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+def get_active_rpc():
+    """
+    Retourne le premier RPC disponible
+    """
+    # Logique de fallback implémentée dans solana_service.py
+    pass
 ```
 
-2. Configurer Gunicorn :
+2. Configurer la rotation des RPC :
+```python
+# services/solana_service.py
+class SolanaService:
+    def __init__(self):
+        self.current_rpc_index = 0
+        self.rpc_config = RPC_CONFIG['mainnet']
+        
+    def get_connection(self):
+        # Rotation automatique des RPC en cas d'erreur
+        pass
+```
+
+### Sécurité et Rate Limiting
+
+1. Configuration dans Railway :
 ```bash
-# gunicorn.conf.py
-accesslog = '-'
-errorlog = '-'
-loglevel = 'info'
+railway variables set RATE_LIMIT_PER_MINUTE=100
+railway variables set RATE_LIMIT_PER_HOUR=1000
 ```
 
-## 6. Mise à l'échelle
-
-### MongoDB Atlas
-
-1. Configurer l'auto-scaling :
-   - Définir les seuils de CPU/RAM
-   - Configurer les alertes
-
-### Railway
-
-1. Configurer les ressources :
-   - Augmenter la RAM si nécessaire
-   - Ajouter des instances si besoin
-
-### Vercel
-
-1. Configurer le scaling automatique :
-   - Activer les previews
-   - Configurer les régions de déploiement
-
-## 7. Sécurité
-
-### Backend
-
-1. Configurer le rate limiting :
+2. Implémentation dans Flask :
 ```python
 from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 limiter = Limiter(
     app,
     key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"]
+    default_limits=[
+        f"{os.getenv('RATE_LIMIT_PER_MINUTE')} per minute",
+        f"{os.getenv('RATE_LIMIT_PER_HOUR')} per hour"
+    ]
 )
 ```
 
-2. Configurer CORS :
+### Monitoring et Logs
+
+1. Configuration des logs Railway :
+```bash
+railway logs --filter mongodb
+railway logs --filter web
+```
+
+2. Alertes MongoDB :
+```bash
+# Configurer via l'interface Railway
+railway alerts create \
+  --name "MongoDB High CPU" \
+  --metric cpu \
+  --threshold 80 \
+  --duration 5m
+```
+
+### Scaling
+
+1. Configuration des ressources :
+```bash
+# Augmenter les ressources MongoDB
+railway scale mongodb --memory 1GB --cpu 1
+
+# Augmenter les ressources Backend
+railway scale web --memory 512MB --cpu 0.5
+```
+
+2. Configuration Gunicorn :
 ```python
-CORS(app, resources={
-    r"/api/*": {
-        "origins": ["https://your-frontend.vercel.app"],
-        "methods": ["GET", "POST", "PUT", "DELETE"],
-        "allow_headers": ["Content-Type"]
-    }
-})
+# gunicorn.conf.py
+workers = 4
+threads = 2
+timeout = 120
+max_requests = 1000
+max_requests_jitter = 50
 ```
 
-### Frontend
+## 2. Vérification du Déploiement
 
-1. Configurer la CSP :
-```typescript
-// vite.config.ts
-export default defineConfig({
-  server: {
-    headers: {
-      'Content-Security-Policy': "default-src 'self';"
-    }
-  }
-});
-```
-
-## 8. Maintenance
-
-### Backups MongoDB
-
-1. Configurer les backups automatiques :
-   - Fréquence : quotidienne
-   - Rétention : 7 jours
-
-### Mises à jour
-
-1. Backend :
+1. Santé de l'application :
 ```bash
-pip install --upgrade -r requirements.txt
+curl https://your-app.railway.app/api/health
+```
+
+2. Vérification MongoDB :
+```bash
+railway run mongosh
+```
+
+3. Logs en temps réel :
+```bash
+railway logs -f
+```
+
+## 3. Maintenance
+
+1. Backup MongoDB :
+```bash
+# Configuration automatique via Railway
+railway backup create mongodb
+```
+
+2. Restauration :
+```bash
+railway backup restore mongodb --backup <backup-id>
+```
+
+3. Mise à jour de l'application :
+```bash
 railway up
-```
-
-2. Frontend :
-```bash
-npm update
-vercel --prod
-```
-
-## 9. Troubleshooting
-
-### Logs
-
-1. Backend (Railway) :
-```bash
-railway logs
-```
-
-2. Frontend (Vercel) :
-```bash
-vercel logs
-```
-
-### Monitoring
-
-1. Vérifier Sentry pour les erreurs
-2. Consulter les métriques MongoDB Atlas
-3. Vérifier les logs Railway/Vercel
-
-## 10. Rollback
-
-### Backend
-
-1. Railway :
-```bash
-railway rollback
-```
-
-### Frontend
-
-1. Vercel :
-```bash
-vercel rollback
 ```
