@@ -1,38 +1,33 @@
 # PumpFun Guard - AI-Powered Token Analysis
 
-Une application de surveillance et d'analyse des tokens Solana en temps réel, utilisant l'intelligence artificielle pour détecter les risques potentiels.
+## 🚀 Vue d'ensemble
 
-## 🚀 Fonctionnalités
+PumpFun Guard est une application d'analyse en temps réel des tokens Solana utilisant l'intelligence artificielle pour détecter les risques potentiels et protéger les investisseurs.
 
-- Surveillance en temps réel des nouveaux tokens sur Solana
-- Analyse IA des tokens avec River ML
-- Interface admin pour la gestion des tokens suspects
-- Système de bannissement des wallets
-- Notifications en temps réel
-- Filtrage et recherche avancée
+## 📋 Prérequis
 
-## 🛠 Stack Technique
+- Node.js 18+
+- Python 3.8+
+- Docker & Docker Compose
+- Compte Railway
+- Compte Vercel ou Netlify
+- Compte RPC Solana (QuickNode/Alchemy recommandé)
+
+## 🛠️ Stack Technique
 
 ### Frontend
 - React 18 avec TypeScript
 - Vite pour le bundling
-- TailwindCSS et shadcn/ui pour l'interface
-- WebSocket pour les mises à jour en temps réel
+- TailwindCSS & shadcn/ui
+- WebSocket pour le temps réel
 
 ### Backend
-- Flask pour l'API REST
-- River ML pour l'analyse IA
-- MongoDB pour le stockage
-- WebSocket pour les événements temps réel
+- Flask & Gunicorn
+- River ML pour l'IA
+- MongoDB (Railway)
+- WebSocket pour les événements
 
-## 📦 Installation
-
-### Prérequis
-- Node.js 18+
-- Python 3.8+
-- MongoDB 6+
-
-### Configuration Locale
+## 🔧 Installation Locale
 
 1. Cloner le repository :
 ```bash
@@ -40,169 +35,347 @@ git clone https://github.com/votre-username/pumpfun-guard.git
 cd pumpfun-guard
 ```
 
-2. Installer les dépendances frontend :
-```bash
-npm install
-```
+2. Variables d'environnement :
 
-3. Créer un environnement virtuel Python :
-```bash
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-.\venv\Scripts\activate   # Windows
-```
-
-4. Installer les dépendances backend :
-```bash
-pip install -r requirements.txt
-```
-
-5. Configurer les variables d'environnement :
-
-Créer un fichier `.env` :
+Frontend (.env) :
 ```env
-# Frontend (.env)
 VITE_API_URL=http://localhost:5000/api
 VITE_PUMPFUN_WS_URL=wss://rpc.api-pump.fun/ws
-
-# Backend (.env)
-FLASK_APP=app.py
-FLASK_ENV=development
-FLASK_DEBUG=1
-MONGO_URI=mongodb://localhost:27017/pumpfun_data
 ```
 
-## 🚀 Déploiement
+Backend (.env) :
+```env
+MONGO_URI=mongodb://mongo:${MONGODB_URL}@mongodb.railway.internal:27017
+FLASK_ENV=development
+FLASK_SECRET_KEY=your-secret-key
+PUMPFUN_API_KEY=your-api-key
+```
 
-### Backend (Railway)
-
-1. Créer un compte sur [Railway](https://railway.app)
-
-2. Créer un nouveau projet :
+3. Développement local avec Docker :
 ```bash
+docker-compose up --build
+```
+
+## 📦 Déploiement
+
+### 1. Railway (Backend + MongoDB)
+
+1. Créer un nouveau projet sur Railway :
+```bash
+railway login
 railway init
 ```
 
-3. Ajouter les variables d'environnement :
+2. Ajouter MongoDB à votre projet :
 ```bash
-railway vars set MONGO_URI=votre_uri_mongodb_atlas
-railway vars set FLASK_ENV=production
+railway add mongodb
 ```
 
-4. Déployer :
+3. Configurer les variables d'environnement :
+```bash
+railway variables set FLASK_ENV=production
+railway variables set FLASK_SECRET_KEY=$(python generate_key.py)
+railway variables set PUMPFUN_API_KEY=your-api-key
+```
+
+4. Configurer le service Flask :
+```bash
+# railway.toml
+[build]
+builder = "nixpacks"
+buildCommand = "pip install -r requirements.txt"
+
+[deploy]
+startCommand = "gunicorn app:app --bind 0.0.0.0:$PORT"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 100
+restartPolicyType = "on-failur qe"
+restartPolicyMaxRetries = 3
+
+[service]
+internal_port = 5000
+
+[database]
+type = "mongodb"
+plan = "free"
+```
+
+5. Déployer :
 ```bash
 railway up
 ```
 
-### Frontend (Vercel)
+### 2. Frontend (Vercel/Netlify)
 
-1. Créer un compte sur [Vercel](https://vercel.com)
+#### Option 1: Vercel
 
-2. Installer Vercel CLI :
+1. Installer Vercel CLI :
 ```bash
-npm i -g vercel
+npm install -g vercel
+```
+
+2. Configurer le projet :
+```bash
+# vercel.json
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "environment": {
+    "VITE_API_URL": "https://your-railway-app.railway.app/api",
+    "VITE_PUMPFUN_WS_URL": "wss://rpc.api-pump.fun/ws"
+  }
+}
 ```
 
 3. Déployer :
 ```bash
-vercel
+vercel --prod
 ```
 
-### MongoDB Atlas
+#### Option 2: Netlify
 
-1. Créer un compte sur [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
-
-2. Créer un nouveau cluster
-
-3. Configurer l'accès réseau :
-   - Ajouter les IPs des serveurs Railway
-   - Ajouter 0.0.0.0/0 pour le développement
-
-4. Créer un utilisateur de base de données
-
-5. Récupérer l'URI de connexion et l'ajouter aux variables d'environnement
-
-## 📝 Configuration des WebSockets
-
-### PumpFun WebSocket
-
-1. Obtenir les credentials d'API sur [PumpFun](https://pump.fun)
-
-2. Configurer dans le frontend :
-```typescript
-// src/lib/constants.ts
-export const WEBSOCKET = {
-  ENDPOINT: 'wss://rpc.api-pump.fun/ws',
-  // ... autres configurations
-};
-```
-
-### Solana RPC
-
-1. Configurer les endpoints RPC :
-```typescript
-// src/lib/constants.ts
-export const SOLANA = {
-  RPC_ENDPOINTS: [
-    'https://api.mainnet-beta.solana.com',
-    // Ajouter vos RPC privés ici
-  ],
-};
-```
-
-## 🔍 Monitoring
-
-### Sentry
-
-1. Créer un compte sur [Sentry](https://sentry.io)
-
-2. Ajouter Sentry au frontend :
+1. Installer Netlify CLI :
 ```bash
-npm install @sentry/react
+npm install -g netlify-cli
 ```
 
-3. Configurer dans le code :
-```typescript
-// src/main.tsx
-import * as Sentry from "@sentry/react";
-
-Sentry.init({
-  dsn: "votre-dsn-sentry"
-});
+2. Configurer le projet :
+```toml
+# netlify.toml
+[build]
+  command = "npm run build"
+  publish = "dist"
+  
+[build.environment]
+  VITE_API_URL = "https://your-railway-app.railway.app/api"
+  VITE_PUMPFUN_WS_URL = "wss://rpc.api-pump.fun/ws"
 ```
 
-### Logging
+3. Déployer :
+```bash
+netlify deploy --prod
+```
 
-Les logs sont gérés via :
-- Frontend : Console + Sentry
-- Backend : Gunicorn + Custom Logger
+## 🐳 Docker
 
-## 📊 Métriques
+### Structure Docker
 
-Métriques importantes à surveiller :
-- Latence des WebSockets
-- Temps de réponse de l'API
-- Utilisation mémoire MongoDB
-- Taux d'erreur IA
-- Nombre de connexions simultanées
+```
+.
+├── docker-compose.yml
+├── Dockerfile.frontend
+├── Dockerfile.backend
+└── nginx/
+    └── nginx.conf
+```
+
+### Configuration des conteneurs
+
+1. Frontend (Dockerfile.frontend) :
+```dockerfile
+FROM node:18-alpine as builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+2. Backend (Dockerfile.backend) :
+```dockerfile
+FROM python:3.8-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 5000
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app", "--workers", "4", "--timeout", "120"]
+```
+
+3. Docker Compose (docker-compose.yml) :
+```yaml
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "80:80"
+    environment:
+      - VITE_API_URL=http://backend:5000/api
+      - VITE_PUMPFUN_WS_URL=wss://rpc.api-pump.fun/ws
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URI=mongodb://mongo:${MONGODB_URL}@mongodb.railway.internal:27017
+      - FLASK_ENV=production
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
+      - PUMPFUN_API_KEY=${PUMPFUN_API_KEY}
+    depends_on:
+      - mongodb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
+
+volumes:
+  mongodb_data:
+```
+
+4. Configuration Nginx (nginx/nginx.conf) :
+```nginx
+server {
+    listen 80;
+    server_name localhost;
+
+    location / {
+        root /usr/share/nginx/html;
+        index index.html;
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api {
+        proxy_pass http://backend:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    location /ws {
+        proxy_pass http://backend:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+    }
+}
+```
 
 ## 🔒 Sécurité
 
-- Rate limiting sur l'API
-- Validation des données WebSocket
-- Sanitization des entrées MongoDB
-- Rotation des clés API
-- CORS configuré
-- Protection CSRF
+1. Secrets et Variables d'environnement :
+- Utiliser Railway pour gérer les secrets
+- Ne jamais commiter de secrets dans Git
+- Utiliser des variables d'environnement pour la configuration
 
-## 🤝 Contribution
+2. CORS et Sécurité :
+- Configurer CORS correctement pour l'API
+- Utiliser HTTPS en production
+- Implémenter le rate limiting
+- Valider toutes les entrées utilisateur
 
-1. Fork le projet
-2. Créer une branche (`git checkout -b feature/amazing-feature`)
-3. Commit les changements (`git commit -m 'Add amazing feature'`)
-4. Push sur la branche (`git push origin feature/amazing-feature`)
-5. Ouvrir une Pull Request
+3. Monitoring :
+- Configurer les logs Railway
+- Mettre en place des alertes
+- Surveiller les métriques MongoDB
 
-## 📄 License
+## 📊 Mise à l'échelle
 
-MIT License - voir le fichier [LICENSE](LICENSE) pour plus de détails.
+1. Railway :
+- Configurer l'auto-scaling
+- Augmenter les ressources si nécessaire
+- Ajouter des workers Gunicorn
+
+2. Frontend :
+- Utiliser un CDN
+- Optimiser les assets
+- Mettre en cache les requêtes API
+
+## 🔄 CI/CD
+
+1. GitHub Actions :
+```yaml
+name: CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Test
+        run: |
+          npm install
+          npm test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Deploy to Railway
+        run: railway up
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+```
+
+## 🔍 Troubleshooting
+
+1. Logs :
+```bash
+# Railway logs
+railway logs
+
+# Container logs
+docker-compose logs -f
+```
+
+2. Monitoring :
+- Vérifier les métriques Railway
+- Consulter les logs MongoDB
+- Surveiller l'utilisation des ressources
+
+3. Rollback :
+```bash
+# Railway rollback
+railway rollback
+
+# Vercel rollback
+vercel rollback
+```
