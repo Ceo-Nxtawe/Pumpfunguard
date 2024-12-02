@@ -12,6 +12,10 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
+@app.route('/api/health', methods=['GET'])
+def health():
+    return jsonify({"status": "healthy"}), 200
+
 # Connexion à MongoDB
 MONGO_URI = os.getenv('MONGO_URI')
 client = MongoClient(MONGO_URI)
