@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Installer Flask uniquement pour ce test
 COPY requirements.txt .
-RUN pip install --no-cache-dir flask flask-cors
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copier le code source
 COPY . .
