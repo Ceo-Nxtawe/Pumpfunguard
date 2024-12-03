@@ -27,9 +27,10 @@ except Exception as e:
 model = ARFClassifier(n_models=10, seed=42)
 
 if __name__ == "__main__":
-    port = os.getenv("PORT", None)
-    if not port:
-        print("Erreur : La variable d'environnement PORT n'est pas définie")
-    else:
-        print(f"Application démarrant sur le port {port}")
-    app.run(host="0.0.0.0", port=int(port or 5000))
+    print("Variables d'environnement disponibles :")
+    for key, value in os.environ.items():
+        print(f"{key}: {value}")
+    
+    port = os.getenv("PORT", "5000")  # Valeur par défaut = 5000
+    print(f"Application démarrant sur le port {port}")
+    app.run(host="0.0.0.0", port=int(port))
