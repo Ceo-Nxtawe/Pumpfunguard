@@ -13,4 +13,4 @@ COPY . .
 EXPOSE 5000
 
 # Commande pour démarrer Gunicorn
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:$PORT", "app:app"]
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:app"]
