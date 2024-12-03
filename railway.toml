@@ -3,25 +3,6 @@ builder = "nixpacks"
 buildCommand = "pip install -r requirements.txt"
 
 [deploy]
-startCommand = "gunicorn -w 4 -b 0.0.0.0:5000 app:app"
-healthcheckPath = "/api/health"
-healthcheckTimeout = 100
-restartPolicyMaxRetries = 3
-
-[service]
-internal_port = 5000
-name = "Pumpfunguard"
-
-[database]
-type = "mongodb"
-plan = "free"
-
-
-[build]
-builder = "nixpacks"
-buildCommand = "pip install -r requirements.txt"
-
-[deploy]
 startCommand = "gunicorn -w 4 -b 0.0.0.0:${PORT} app:app"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 120  # 2 minutes
