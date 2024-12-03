@@ -12,7 +12,15 @@ CORS(app)
 
 @app.route('/api/health', methods=['GET'])
 def health():
-    return jsonify({"status": "healthy"}), 200
+    try:
+        # Test simple pour vérifier la connexion à MongoDB
+        client.admin.command('ping')
+        print("MongoDB connection is active")  # Log de vérification
+        return jsonify({"status": "healthy"}), 200
+    except Exception as e:
+        print(f"MongoDB healthcheck failed: {e}")
+        return jsonify({"status": "unhealthy", "error": str(e)}), 500
+
 
 # MongoDB Connection
 MONGO_URI = os.getenv('MONGO_URI')
@@ -27,7 +35,7 @@ except Exception as e:
 model = ARFClassifier(n_models=10, seed=42)
 
 if __name__ == "__main__":
-    port = os.getenv("PORT")
+    port = os.getenv("PORT", "5000")
     if not port:
         print("Erreur critique : La variable PORT n'est pas définie ou est vide.")
     else:
