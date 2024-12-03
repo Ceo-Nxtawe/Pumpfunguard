@@ -1,11 +1,9 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify
 from flask_cors import CORS
 from pymongo import MongoClient
-from river.forest import ARFClassifier  # Mise à jour de l'importation
-from river.preprocessing import StandardScaler
-from datetime import datetime
-import os
+from river.forest import ARFClassifier
 from dotenv import load_dotenv
+import os
 
 load_dotenv()
 
@@ -16,17 +14,19 @@ CORS(app)
 def health():
     return jsonify({"status": "healthy"}), 200
 
-# Connexion à MongoDB
+# MongoDB Connection
 MONGO_URI = os.getenv('MONGO_URI')
-client = MongoClient(MONGO_URI)
-db = client.pumpfun_data
+try:
+    client = MongoClient(MONGO_URI)
+    db = client.pumpfun_data
+    print("Connexion réussie à MongoDB")
+except Exception as e:
+    print(f"Erreur MongoDB : {e}")
 
-# Initialisation du modèle d'IA
-model = ARFClassifier(
-    n_models=10,
-    seed=42
-)
+# Modèle d'IA
+model = ARFClassifier(n_models=10, seed=42)
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))  # Utilise $PORT de Railway, sinon 5000 par défaut
+    port = int(os.getenv("PORT", 5000))  # Utilise $PORT ou 5000 par défaut
+    print(f"Application démarrant sur le port {port}")
     app.run(host="0.0.0.0", port=port)
